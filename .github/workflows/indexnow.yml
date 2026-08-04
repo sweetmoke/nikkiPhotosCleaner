@@ -7,6 +7,9 @@ on:
 
 jobs:
   indexnow:
+    # This workflow belongs to the upstream project's website. Forks must not
+    # submit indexing notifications for nikki.ranaxro.com.
+    if: github.repository == 'RanAxro/nikki_albums'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
