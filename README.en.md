@@ -9,7 +9,6 @@ This repository is an unofficial enhanced fork of [RanAxro/nikki_albums](https:/
 - **Selectable cleanup of matching versions**: A confirmation dialog lets the user choose whether to also clean up matching Low Quality, Screenshot, Magazine Photos, Clock-In Photo, and Collage Photo versions. Low Quality and Screenshot are selected by default. Selected files are moved to the application's recycle bin rather than permanently deleted.
 - **Safer export behavior**: When a file with the same name already exists in the destination, a non-conflicting filename is generated automatically. If a photo fails to export or verify, neither its source file nor its matching versions are cleaned up.
 - **Restricted IndexNow workflow**: The workflow that submits updates to the original author's website, `nikki.ranaxro.com`, is allowed to run only in the upstream `RanAxro/nikki_albums` repository, preventing this fork from notifying the original website accidentally.
-- **Additional localization**: Simplified Chinese, Traditional Chinese, and English strings were added for the new feature. Other locales currently fall back to English.
 
 > “Export HQ & Clean Up” moves photo files. When using it for the first time, test with a small selection and verify the exported results.
 
