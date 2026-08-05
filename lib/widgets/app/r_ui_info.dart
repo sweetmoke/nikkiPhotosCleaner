@@ -65,13 +65,13 @@ const SizedBox block5H = SizedBox(height: 5);
 const SizedBox block10H = SizedBox(height: 10);
 const SizedBox block20H = SizedBox(height: 20);
 
-const Duration animationTime = Duration(milliseconds: 100);
+const Duration animationTime = Duration(milliseconds: 160);
 const Duration imageToggleDuration = Duration(milliseconds: 300);
-const Curve animationCurve = Curves.linear;
+const Curve animationCurve = Curves.easeOutCubic;
 const Duration toastDuration = Duration(milliseconds: 3000);
 
 const double dialogSafePadding = 40;
-const double dialogBorderRadius = smallBorderRadius + 0.5 * smallPadding;
+const double dialogBorderRadius = 14;
 
 double get safeMargin {
   if (Platform.isWindows) {

@@ -142,6 +142,9 @@ class _FrameState extends State<Frame> {
             child: MaterialApp(
               key: ValueKey(_appRebuildKey),
               debugShowCheckedModeBanner: false,
+              theme: buildMaterialTheme(
+                AppColorScheme.table[currentTheme] ?? AppTheme.defaultTheme,
+              ),
               locale: context.locale,
               supportedLocales: context.supportedLocales,
               localizationsDelegates: context.localizationDelegates,
@@ -977,8 +980,10 @@ class WindowsFrame extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           border: Border.all(
-            color: Theme.of(context).colorScheme.secondary,
-            width: 1,
+            color: AppColorScheme.of(
+              context,
+            ).primary.onDisabledColor.withValues(alpha: 0.22),
+            width: 0.5,
           ),
         ),
         child: Column(

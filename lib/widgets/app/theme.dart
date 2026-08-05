@@ -2,7 +2,13 @@ import "package:flutter/material.dart";
 
 abstract class AppThemeColor {
   static const Color transparent = Colors.transparent;
-  static const Color shadow = Color(0x33000000);
+  static const Color brand = Color(0xFFFF385C);
+  static const Color brandActive = Color(0xFFE00B41);
+  static const Color brandDisabled = Color(0xFFFFD1DA);
+  static const Color ink = Color(0xFF222222);
+  static const Color muted = Color(0xFF6A6A6A);
+  static const Color hairline = Color(0xFFDDDDDD);
+  static const Color shadow = Color(0x1A000000);
   static const Color littleRed = Color(0xFFFFF0F0);
   static const Color littleGreen = Color(0xFFF0FFF0);
 }
@@ -222,41 +228,133 @@ class AppColorScheme {
   }
 }
 
+/// Bridges the app's existing color roles into Material widgets used by
+/// dialogs, menus, text fields and tooltips. The custom widget system remains
+/// the source of truth, so this only improves visual consistency.
+ThemeData buildMaterialTheme(AppColorScheme colors) {
+  final bool isDark =
+      ThemeData.estimateBrightnessForColor(colors.primary.color) ==
+      Brightness.dark;
+  final Color accent = colors.highlight.color;
+
+  return ThemeData(
+    useMaterial3: true,
+    brightness: isDark ? Brightness.dark : Brightness.light,
+    // Airbnb Cereal is proprietary; Segoe UI is the native Windows fallback.
+    fontFamily: "Segoe UI",
+    scaffoldBackgroundColor: colors.background.color,
+    canvasColor: colors.background.color,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: accent,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      surface: colors.primary.color,
+      error: colors.error.pressedColor,
+    ),
+    textTheme: const TextTheme(
+      headlineSmall: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        height: 1.2,
+      ),
+      titleLarge: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        height: 1.25,
+      ),
+      titleMedium: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        height: 1.25,
+      ),
+      bodyLarge: TextStyle(fontSize: 16, height: 1.5),
+      bodyMedium: TextStyle(fontSize: 14, height: 1.43),
+      labelLarge: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        height: 1.29,
+      ),
+    ),
+    dividerColor: colors.primary.onDisabledColor,
+    splashFactory: NoSplash.splashFactory,
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(
+        color: colors.highlight.color,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: AppThemeColor.shadow,
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      textStyle: TextStyle(
+        color: colors.highlight.onColor,
+        fontSize: 12.5,
+        height: 1.25,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      waitDuration: const Duration(milliseconds: 450),
+    ),
+    scrollbarTheme: ScrollbarThemeData(
+      radius: const Radius.circular(8),
+      thickness: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.hovered) ? 10 : 7,
+      ),
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.hovered)
+            ? colors.primary.onDisabledColor.withValues(alpha: 0.65)
+            : colors.primary.onDisabledColor.withValues(alpha: 0.42),
+      ),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: accent,
+      linearTrackColor: colors.secondary.enabledColor,
+      circularTrackColor: colors.secondary.enabledColor,
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      selectionColor: accent.withValues(alpha: 0.24),
+      cursorColor: accent,
+      selectionHandleColor: accent,
+    ),
+  );
+}
+
 const AppColorScheme theme1 = AppColorScheme(
   primary: ColorRoleScheme(
     color: Color(0xFFFFFFFF),
-    onColor: Color(0xFF333333),
-    enabledColor: Color(0xFFF3F3F3),
-    onEnabledColor: Color(0xDD333333),
-    disabledColor: Color(0xFFFFFFFF),
-    onDisabledColor: Color(0x55444444),
-    hoveredColor: Color(0xFFEEEEEE),
-    onHoveredColor: Color(0xEE333333),
-    pressedColor: Color(0xFFDDDDDD),
-    onPressedColor: Color(0xFF333333),
+    onColor: Color(0xFF222222),
+    enabledColor: Color(0xFFF7F7F7),
+    onEnabledColor: Color(0xFF3F3F3F),
+    disabledColor: Color(0xFFF7F7F7),
+    onDisabledColor: Color(0xFF929292),
+    hoveredColor: Color(0xFFF7F7F7),
+    onHoveredColor: Color(0xFF222222),
+    pressedColor: Color(0xFFF2F2F2),
+    onPressedColor: Color(0xFF222222),
   ),
   secondary: ColorRoleScheme(
-    color: Color(0xFFF5F5F5),
-    onColor: Color(0xFF333333),
-    enabledColor: Color(0xFFE9E9E9),
-    onEnabledColor: Color(0xDD333333),
-    disabledColor: Color(0xAAE9E9E9),
-    onDisabledColor: Color(0x55333333),
-    hoveredColor: Color(0xFFE5E5E5),
-    onHoveredColor: Color(0xEE333333),
-    pressedColor: Color(0xFFD5D5D5),
-    onPressedColor: Color(0xFF333333),
+    color: Color(0xFFFFFFFF),
+    onColor: Color(0xFF222222),
+    enabledColor: Color(0xFFF7F7F7),
+    onEnabledColor: Color(0xFF3F3F3F),
+    disabledColor: Color(0xFFF2F2F2),
+    onDisabledColor: Color(0xFF929292),
+    hoveredColor: Color(0xFFF7F7F7),
+    onHoveredColor: Color(0xFF222222),
+    pressedColor: Color(0xFFF2F2F2),
+    onPressedColor: Color(0xFF222222),
   ),
   tertiary: ColorRoleScheme(
-    color: Color(0xFFF5F5F5),
-    onColor: Color(0xFF333333),
-    enabledColor: Color(0xFFE9E9E9),
-    disabledColor: Color(0xAAE9E9E9),
-    onDisabledColor: Color(0x55333333),
-    hoveredColor: Color(0xFFE5E5E5),
-    onHoveredColor: Color(0xFF333333),
-    pressedColor: Color(0xFFD5D5D5),
-    onPressedColor: Color(0xFF333333),
+    color: Color(0xFFF7F7F7),
+    onColor: Color(0xFF222222),
+    enabledColor: Color(0xFFF2F2F2),
+    disabledColor: Color(0xFFF2F2F2),
+    onDisabledColor: Color(0xFF929292),
+    hoveredColor: Color(0xFFEBEBEB),
+    onHoveredColor: Color(0xFF222222),
+    pressedColor: Color(0xFFDDDDDD),
+    onPressedColor: Color(0xFF222222),
   ),
   success: ColorRoleScheme(
     color: Color(0x00000000),
@@ -268,67 +366,67 @@ const AppColorScheme theme1 = AppColorScheme(
   ),
   error: ColorRoleScheme(
     color: Color(0x00000000),
-    onColor: Color(0xFF333333),
-    hoveredColor: Color(0xFFEE7777),
-    onHoveredColor: Color(0xFF333333),
-    pressedColor: Color(0xFFEE4444),
-    onPressedColor: Color(0xFF333333),
+    onColor: Color(0xFFC13515),
+    hoveredColor: Color(0xFFFFF0F0),
+    onHoveredColor: Color(0xFFB32505),
+    pressedColor: Color(0xFFFFE5E5),
+    onPressedColor: Color(0xFFB32505),
   ),
   background: ColorRoleScheme(
     color: Color(0xFFFFFFFF),
-    onColor: Color(0xFF333333),
+    onColor: Color(0xFF222222),
     enabledColor: Color(0xFFF7F7F7),
-    onEnabledColor: Color(0xDD333333),
-    disabledColor: Color(0xAAF7F7F7),
-    onDisabledColor: Color(0x55444444),
-    hoveredColor: Color(0xFFE7E7E7),
-    onHoveredColor: Color(0xEE333333),
-    pressedColor: Color(0xFFD7D7D7),
-    onPressedColor: Color(0xFF333333),
+    onEnabledColor: Color(0xFF3F3F3F),
+    disabledColor: Color(0xFFF7F7F7),
+    onDisabledColor: Color(0xFF929292),
+    hoveredColor: Color(0xFFF7F7F7),
+    onHoveredColor: Color(0xFF222222),
+    pressedColor: Color(0xFFF2F2F2),
+    onPressedColor: Color(0xFF222222),
   ),
   highlight: ColorRoleScheme(
-    color: Color(0xFF444444),
-    onColor: Color(0xFFEEEEEE),
-    enabledColor: Color(0xFF444444),
+    color: Color(0xFFFF385C),
+    onColor: Color(0xFFFFFFFF),
+    enabledColor: Color(0xFFFF385C),
     onEnabledColor: Color(0xFFFFFFFF),
-    disabledColor: Color(0xFF585858),
+    disabledColor: Color(0xFFFFD1DA),
     onDisabledColor: Color(0xFFFFFFFF),
-    hoveredColor: Color(0xFF333333),
-    onHoveredColor: Color(0xFFE8E8E8),
-    pressedColor: Color(0xFF222222),
+    hoveredColor: Color(0xFFFF385C),
+    onHoveredColor: Color(0xFFFFFFFF),
+    pressedColor: Color(0xFFE00B41),
     onPressedColor: Color(0xFFFFFFFF),
   ),
 );
 
 const AppColorScheme theme2 = AppColorScheme(
   primary: ColorRoleScheme(
-    color: Color(0xFF333333),
-    onColor: Color(0xFFEEEEEE),
-    enabledColor: Color(0xFF404040),
+    color: Color(0xFF202226),
+    onColor: Color(0xFFF1F2F4),
+    enabledColor: Color(0xFF292C31),
     onDisabledColor: Color(0x55EEEEEE),
-    hoveredColor: Color(0xFF444444),
+    hoveredColor: Color(0xFF32363C),
     onHoveredColor: Color(0xFFEEEEEE),
-    pressedColor: Color(0xFF555555),
+    pressedColor: Color(0xFF3B4047),
     onPressedColor: Color(0xFFEEEEEE),
   ),
   secondary: ColorRoleScheme(
-    color: Color(0xFF383838),
+    color: Color(0xFF272A2F),
     onColor: Color(0xFFEEEEEE),
-    enabledColor: Color(0xFF444444),
+    enabledColor: Color(0xFF30343A),
     onDisabledColor: Color(0x55EEEEEE),
-    hoveredColor: Color(0xFF484848),
+    hoveredColor: Color(0xFF393E45),
     onHoveredColor: Color(0xFFEEEEEE),
-    pressedColor: Color(0xFF585858),
+    pressedColor: Color(0xFF434951),
     onPressedColor: Color(0xFFEEEEEE),
   ),
   tertiary: ColorRoleScheme(
-    color: Color(0xFF383838),
+    color: Color(0xFF2B2E34),
     onColor: Color(0xFFEEEEEE),
-    enabledColor: Color(0xFF444444),
+    enabledColor: Color(0xFF34383F),
     onDisabledColor: Color(0x55EEEEEE),
-    hoveredColor: Color(0xFF484848),
+    hoveredColor: Color(0xFF3D424A),
     onHoveredColor: Color(0xFFEEEEEE),
-    pressedColor: Color(0xFF585858),
+    pressedColor: Color(0xFF474D56),
     onPressedColor: Color(0xFFEEEEEE),
   ),
   success: ColorRoleScheme(
@@ -348,18 +446,26 @@ const AppColorScheme theme2 = AppColorScheme(
     onPressedColor: Color(0xFFEEEEEE),
   ),
   background: ColorRoleScheme(
-    color: Color(0xFF444444),
+    color: Color(0xFF1B1D21),
     onColor: Color(0xFFEEEEEE),
-    enabledColor: Color(0xFF494949),
+    enabledColor: Color(0xFF25282D),
     onDisabledColor: Color(0x55EEEEEE),
-    hoveredColor: Color(0xFF595959),
+    hoveredColor: Color(0xFF30343A),
     onHoveredColor: Color(0xFFEEEEEE),
-    pressedColor: Color(0xFF696969),
+    pressedColor: Color(0xFF3A3F46),
     onPressedColor: Color(0xFFEEEEEE),
   ),
   highlight: ColorRoleScheme(
-    color: Color(0xFFEEEEEE),
-    onColor: Color(0xFF444444),
+    color: Color(0xFFFF385C),
+    onColor: Color(0xFFFFFFFF),
+    enabledColor: Color(0xFFFF385C),
+    onEnabledColor: Color(0xFFFFFFFF),
+    disabledColor: Color(0xFF7A3543),
+    onDisabledColor: Color(0xFFDDDDDD),
+    hoveredColor: Color(0xFFFF385C),
+    onHoveredColor: Color(0xFFFFFFFF),
+    pressedColor: Color(0xFFE00B41),
+    onPressedColor: Color(0xFFFFFFFF),
   ),
 );
 
@@ -421,8 +527,16 @@ const AppColorScheme theme3 = AppColorScheme(
     onPressedColor: Color(0xFF21556E),
   ),
   highlight: ColorRoleScheme(
-    color: Color(0xFF21556E),
-    onColor: Color(0xFFECF3FB),
+    color: Color(0xFFFF385C),
+    onColor: Color(0xFFFFFFFF),
+    enabledColor: Color(0xFFFF385C),
+    onEnabledColor: Color(0xFFFFFFFF),
+    disabledColor: Color(0xFFFFD1DA),
+    onDisabledColor: Color(0xFFFFFFFF),
+    hoveredColor: Color(0xFFFF385C),
+    onHoveredColor: Color(0xFFFFFFFF),
+    pressedColor: Color(0xFFE00B41),
+    onPressedColor: Color(0xFFFFFFFF),
   ),
 );
 
@@ -484,8 +598,16 @@ const AppColorScheme theme4 = AppColorScheme(
     onPressedColor: Color(0xFF7D2E50),
   ),
   highlight: ColorRoleScheme(
-    color: Color(0xFF7D2E50),
-    onColor: Color(0xFFFFF5F9),
+    color: Color(0xFFFF385C),
+    onColor: Color(0xFFFFFFFF),
+    enabledColor: Color(0xFFFF385C),
+    onEnabledColor: Color(0xFFFFFFFF),
+    disabledColor: Color(0xFFFFD1DA),
+    onDisabledColor: Color(0xFFFFFFFF),
+    hoveredColor: Color(0xFFFF385C),
+    onHoveredColor: Color(0xFFFFFFFF),
+    pressedColor: Color(0xFFE00B41),
+    onPressedColor: Color(0xFFFFFFFF),
   ),
 );
 
@@ -547,7 +669,15 @@ const AppColorScheme theme5 = AppColorScheme(
     onPressedColor: Color(0xFF6B5200),
   ),
   highlight: ColorRoleScheme(
-    color: Color(0xFF6B5200),
-    onColor: Color(0xFFFFFCF5),
+    color: Color(0xFFFF385C),
+    onColor: Color(0xFFFFFFFF),
+    enabledColor: Color(0xFFFF385C),
+    onEnabledColor: Color(0xFFFFFFFF),
+    disabledColor: Color(0xFFFFD1DA),
+    onDisabledColor: Color(0xFFFFFFFF),
+    hoveredColor: Color(0xFFFF385C),
+    onHoveredColor: Color(0xFFFFFFFF),
+    pressedColor: Color(0xFFE00B41),
+    onPressedColor: Color(0xFFFFFFFF),
   ),
 );

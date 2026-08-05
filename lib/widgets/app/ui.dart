@@ -1,4 +1,3 @@
-
 import "package:nikki_albums/widgets/common/component.dart";
 import "component.dart";
 
@@ -9,7 +8,6 @@ import "package:flutter/services.dart";
 import "package:easy_localization/easy_localization.dart";
 import "package:cached_network_image/cached_network_image.dart";
 import "package:super_tooltip/super_tooltip.dart";
-
 
 class AppDivider extends StatelessWidget {
   final Axis direction;
@@ -317,8 +315,18 @@ class _AppRawButtonState extends State<AppRawButton> {
         : null;
 
     final (colorRole, colorState, isTransparent) =
-        style?.shader?.call(widget.usable, widget.isSelected, isInside, isPressed) ??
-        widget.shader?.call(widget.usable, widget.isSelected, isInside, isPressed) ??
+        style?.shader?.call(
+          widget.usable,
+          widget.isSelected,
+          isInside,
+          isPressed,
+        ) ??
+        widget.shader?.call(
+          widget.usable,
+          widget.isSelected,
+          isInside,
+          isPressed,
+        ) ??
         (ColorRole.of(context), ColorState.normal, true);
 
     final Widget? child =
@@ -339,6 +347,14 @@ class _AppRawButtonState extends State<AppRawButton> {
                 context,
               ).byRole(colorRole).byState(colorState).withAlpha(0)
             : AppColorScheme.of(context).byRole(colorRole).byState(colorState),
+        border: !isTransparent && colorRole != ColorRole.highlight
+            ? Border.all(
+                color: AppColorScheme.of(
+                  context,
+                ).byRole(colorRole).onDisabledColor.withValues(alpha: 0.38),
+                width: 1,
+              )
+            : null,
       ),
       width: style?.width ?? widget.width,
       height: style?.height ?? widget.height,
@@ -604,7 +620,7 @@ class AppButton extends StatelessWidget {
   }
 }
 
-class AppFloatingIndicatorButtonGroup extends StatelessWidget{
+class AppFloatingIndicatorButtonGroup extends StatelessWidget {
   final Duration floatDuration;
   final Duration delta;
   final bool hideWhenNoTarget;
@@ -621,28 +637,31 @@ class AppFloatingIndicatorButtonGroup extends StatelessWidget{
   });
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return FloatingIndicatorGroup(
       floatDuration: floatDuration,
       delta: delta,
       hideWhenNoTarget: hideWhenNoTarget,
       putBottom: true,
-      indicatorBuilder: (BuildContext context, BoxConstraints constraints, [Object? info]){
-        return Container(
-          width: constraints.maxWidth,
-          height: constraints.maxHeight,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(borderRadius),
-            color: AppColorScheme.of(context).byRole(ColorRole.of(context)).hoveredColor,
-          ),
-        );
-      },
+      indicatorBuilder:
+          (BuildContext context, BoxConstraints constraints, [Object? info]) {
+            return Container(
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(borderRadius),
+                color: AppColorScheme.of(
+                  context,
+                ).byRole(ColorRole.of(context)).hoveredColor,
+              ),
+            );
+          },
       child: child,
     );
   }
 }
 
-class AppFloatingIndicatorButtonTarget extends StatelessWidget{
+class AppFloatingIndicatorButtonTarget extends StatelessWidget {
   final bool isTarget;
   final bool defaultTarget;
   final Object? info;
@@ -657,32 +676,32 @@ class AppFloatingIndicatorButtonTarget extends StatelessWidget{
   });
 
   @override
-  Widget build(BuildContext context){
-    if(!isTarget){
+  Widget build(BuildContext context) {
+    if (!isTarget) {
       return child;
     }
 
     return AppButtonConfiguration(
       style: AppButtonStyle(
-        shader: (bool usable, bool isSelected, bool isInside, bool isPressed){
+        shader: (bool usable, bool isSelected, bool isInside, bool isPressed) {
           ColorRole colorRole = ColorRole.of(context);
           ColorState colorState = ColorState.normal;
           bool isTransparent = true;
 
-          if(usable){
+          if (usable) {
             colorState = ColorState.enabled;
-            if(isSelected){
+            if (isSelected) {
               colorState = ColorState.pressed;
               isTransparent = false;
             }
-            if(isInside){
+            if (isInside) {
               colorState = ColorState.hovered;
             }
-            if(isPressed){
+            if (isPressed) {
               colorState = ColorState.pressed;
               isTransparent = false;
             }
-          }else{
+          } else {
             colorState = ColorState.disabled;
           }
 
@@ -1007,7 +1026,7 @@ class _AppUncontrolledSwitchState extends State<AppUncontrolledSwitch> {
   }
 }
 
-class AppRadioStack extends StatefulWidget{
+class AppRadioStack extends StatefulWidget {
   final Duration duration;
   final Axis direction;
   final double spacing;
@@ -1027,15 +1046,15 @@ class AppRadioStack extends StatefulWidget{
   State<AppRadioStack> createState() => _AppRadioStackState();
 }
 
-class _AppRadioStackState extends State<AppRadioStack>{
+class _AppRadioStackState extends State<AppRadioStack> {
   Offset _offset = Offset.zero;
   final ValueNotifier<Rect> indicator = ValueNotifier(Rect.zero);
 
-  Rect? _getRect(BuildContext context){
+  Rect? _getRect(BuildContext context) {
     final RenderObject? renderObject = context.findRenderObject();
-    if(renderObject == null) return null;
+    if (renderObject == null) return null;
 
-    if(renderObject is RenderBox && renderObject.hasSize){
+    if (renderObject is RenderBox && renderObject.hasSize) {
       final Offset offset = renderObject.localToGlobal(Offset.zero);
       final Size size = renderObject.size;
       return Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
@@ -1046,31 +1065,31 @@ class _AppRadioStackState extends State<AppRadioStack>{
 
   Offset get offset => _offset;
 
-  set offset(Offset newOffset){
-    if(newOffset != _offset){
-      setState((){
+  set offset(Offset newOffset) {
+    if (newOffset != _offset) {
+      setState(() {
         _offset = newOffset;
       });
     }
   }
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
   }
 
   @override
-  Widget build(BuildContext context){
-    WidgetsBinding.instance.addPostFrameCallback((_){
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       offset = _getRect(context)?.topLeft ?? Offset.zero;
     });
 
     final List<Widget> children = <Widget>[];
-    for(int index = 0; index < widget.children.length; index++){
+    for (int index = 0; index < widget.children.length; index++) {
       children.add(
         RenderListener(
-          onRender: (Rect rect){
-            if(index == widget.selectedIndex){
+          onRender: (Rect rect) {
+            if (index == widget.selectedIndex) {
               indicator.value = rect.shift(-offset);
             }
           },
@@ -1086,31 +1105,43 @@ class _AppRadioStackState extends State<AppRadioStack>{
       children: [
         AppFloatingIndicatorButtonGroup(
           hideWhenNoTarget: false,
-          child: widget.direction == Axis.horizontal ?
-            Row(spacing: widget.spacing, children: children) :
-            Column(spacing: widget.spacing, children: children),
+          child: widget.direction == Axis.horizontal
+              ? Row(spacing: widget.spacing, children: children)
+              : Column(spacing: widget.spacing, children: children),
         ),
 
         /// Indicator
         ValueListenableBuilder(
           valueListenable: indicator,
-          builder: (BuildContext context, Rect rect, Widget? child){
+          builder: (BuildContext context, Rect rect, Widget? child) {
             return AnimatedPositioned(
               duration: widget.duration,
-              left: widget.direction == Axis.vertical ? rect.left + 1 : rect.left,
-              top: widget.direction == Axis.horizontal ? rect.top - 1 : rect.top,
+              left: widget.direction == Axis.vertical
+                  ? rect.left + 1
+                  : rect.left,
+              top: widget.direction == Axis.horizontal
+                  ? rect.top - 1
+                  : rect.top,
               width: rect.width,
               height: rect.height,
               child: Align(
-                alignment: widget.direction == Axis.vertical ? Alignment.centerLeft : Alignment.bottomCenter,
+                alignment: widget.direction == Axis.vertical
+                    ? Alignment.centerLeft
+                    : Alignment.bottomCenter,
                 child: AnimatedContainer(
                   duration: widget.duration,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.all(Radius.circular(1)),
-                    color: AppColorScheme.of(context).byRole(ColorRole.of(context)).onHoveredColor
+                    color: AppColorScheme.of(
+                      context,
+                    ).byRole(ColorRole.of(context)).onHoveredColor,
                   ),
-                  width: widget.direction == Axis.vertical ? 2 : 0.5 * rect.width,
-                  height: widget.direction == Axis.horizontal ? 2 : 0.5 * rect.height,
+                  width: widget.direction == Axis.vertical
+                      ? 2
+                      : 0.5 * rect.width,
+                  height: widget.direction == Axis.horizontal
+                      ? 2
+                      : 0.5 * rect.height,
                 ),
               ),
             );
@@ -1121,7 +1152,7 @@ class _AppRadioStackState extends State<AppRadioStack>{
   }
 
   @override
-  void dispose(){
+  void dispose() {
     super.dispose();
   }
 }
@@ -1199,7 +1230,7 @@ class AppText extends StatelessWidget {
     TextOverflow? overflow,
     bool? softWrap,
     Color? color,
-  }){
+  }) {
     return AppText(
       data,
       key: key,
@@ -1213,13 +1244,19 @@ class AppText extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return Text(
       isTranslate ? context.tr(data) : data,
       style: TextStyle(
-        fontSize: fontSize,
+        fontSize: fontSize ?? 14,
         fontWeight: fontWeight,
-        color: color ?? AppColorScheme.of(context).byRole(ColorRole.of(context)).onByState(ColorState.of(context)),
+        height: 1.43,
+        letterSpacing: 0,
+        color:
+            color ??
+            AppColorScheme.of(
+              context,
+            ).byRole(ColorRole.of(context)).onByState(ColorState.of(context)),
       ),
       overflow: overflow,
       softWrap: softWrap,
@@ -1227,7 +1264,7 @@ class AppText extends StatelessWidget {
   }
 }
 
-class AppIcon extends StatelessWidget{
+class AppIcon extends StatelessWidget {
   final String name;
   final bool isDye;
   final double opacity;
@@ -1248,8 +1285,12 @@ class AppIcon extends StatelessWidget{
   });
 
   @override
-  Widget build(BuildContext context){
-    final Color drawColor = color ?? AppColorScheme.of(context).byRole(ColorRole.of(context)).onByState(ColorState.of(context));
+  Widget build(BuildContext context) {
+    final Color drawColor =
+        color ??
+        AppColorScheme.of(
+          context,
+        ).byRole(ColorRole.of(context)).onByState(ColorState.of(context));
 
     return Image.asset(
       "assets/icon/$name.webp",
@@ -1261,7 +1302,7 @@ class AppIcon extends StatelessWidget{
   }
 }
 
-class AppTextFiled extends StatefulWidget{
+class AppTextFiled extends StatefulWidget {
   final bool autofocus;
   final String? initText;
   final TextEditingController? controller;
@@ -1287,62 +1328,91 @@ class AppTextFiled extends StatefulWidget{
   State<AppTextFiled> createState() => _AppTextFiledState();
 }
 
-class _AppTextFiledState extends State<AppTextFiled>{
+class _AppTextFiledState extends State<AppTextFiled> {
   late TextEditingController controller;
   late bool hasController;
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     controller = widget.controller ?? TextEditingController();
     hasController = widget.controller != null;
-    if(widget.initText != null){
+    if (widget.initText != null) {
       controller.text = widget.initText!;
     }
   }
 
   @override
-  void dispose(){
-    if(!hasController){
+  void dispose() {
+    if (!hasController) {
       controller.dispose();
     }
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return TextField(
       autofocus: widget.autofocus,
       controller: controller,
       onChanged: widget.onChanged,
-      cursorColor: AppColorScheme.of(context).byRole(ColorRole.of(context)).onColor,
-      style: TextStyle(color: AppColorScheme.of(context).byRole(ColorRole.of(context)).onColor),
+      cursorColor: AppColorScheme.of(
+        context,
+      ).byRole(ColorRole.of(context)).onColor,
+      style: TextStyle(
+        color: AppColorScheme.of(context).byRole(ColorRole.of(context)).onColor,
+      ),
       decoration: InputDecoration(
-        labelText: widget.isTranslateLabel && widget.labelText != null ? context.tr(widget.labelText!) : widget.labelText,
-        hintText: widget.isTranslateHint && widget.hintText != null ? context.tr(widget.hintText!) : widget.hintText,
+        labelText: widget.isTranslateLabel && widget.labelText != null
+            ? context.tr(widget.labelText!)
+            : widget.labelText,
+        hintText: widget.isTranslateHint && widget.hintText != null
+            ? context.tr(widget.hintText!)
+            : widget.hintText,
         labelStyle: TextStyle(
-          color: AppColorScheme.of(context).byRole(ColorRole.of(context)).onColor,
+          color: AppColorScheme.of(
+            context,
+          ).byRole(ColorRole.of(context)).onDisabledColor,
         ),
         floatingLabelStyle: TextStyle(
-          color: AppColorScheme.of(context).byRole(ColorRole.of(context)).onPressedColor,
+          color: AppColorScheme.of(
+            context,
+          ).byRole(ColorRole.of(context)).onPressedColor,
         ),
         hintStyle: TextStyle(
-          color: AppColorScheme.of(context).byRole(ColorRole.of(context)).onColor,
+          color: AppColorScheme.of(
+            context,
+          ).byRole(ColorRole.of(context)).onDisabledColor,
         ),
-        border: UnderlineInputBorder(
+        border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(smallBorderRadius),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(
+            color: AppColorScheme.of(
+              context,
+            ).byRole(ColorRole.of(context)).onDisabledColor,
+          ),
         ),
-        enabledBorder: UnderlineInputBorder(
+        enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(smallBorderRadius),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(
+            color: AppColorScheme.of(
+              context,
+            ).byRole(ColorRole.of(context)).onDisabledColor,
+          ),
         ),
-        focusedBorder: UnderlineInputBorder(
+        focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(smallBorderRadius),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(
+            color: AppColorScheme.of(
+              context,
+            ).byRole(ColorRole.of(context)).onColor,
+            width: 2,
+          ),
         ),
         filled: true,
-        fillColor: AppColorScheme.of(context).byRole(ColorRole.of(context)).enabledColor,
+        fillColor: AppColorScheme.of(
+          context,
+        ).byRole(ColorRole.of(context)).color,
       ),
     );
   }
@@ -1544,7 +1614,7 @@ class AppSlider extends StatelessWidget {
   }
 }
 
-class AppDropdown extends StatefulWidget{
+class AppDropdown extends StatefulWidget {
   final MenuController? controller;
   final AlignmentGeometry? alignment;
   final double borderRadius;
@@ -1570,7 +1640,7 @@ class _AppDropdownState extends State<AppDropdown> {
   late final MenuController controller;
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     controller = widget.controller ?? MenuController();
   }
@@ -1580,7 +1650,9 @@ class _AppDropdownState extends State<AppDropdown> {
     return MenuAnchor(
       style: MenuStyle(
         shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(widget.borderRadius)),
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+          ),
         ),
         padding: WidgetStateProperty.all(const EdgeInsets.all(0)),
         backgroundColor: WidgetStateProperty.all(
@@ -1594,18 +1666,24 @@ class _AppDropdownState extends State<AppDropdown> {
           offsetBegin: Offset(0, -20),
           opacityBegin: 0.7,
           child: SmoothPointerScroll(
-            builder: (BuildContext context, ScrollController scrollController, ScrollPhysics physics, IndependentScrollbarController scrollbarController) {
-              return SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                controller: scrollController,
-                physics: physics,
-                child: AppFloatingIndicatorButtonGroup(
-                  child: Column(
-                    children: widget.childrenBuilder(context, controller),
-                  ),
-                ),
-              );
-            },
+            builder:
+                (
+                  BuildContext context,
+                  ScrollController scrollController,
+                  ScrollPhysics physics,
+                  IndependentScrollbarController scrollbarController,
+                ) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.vertical,
+                    controller: scrollController,
+                    physics: physics,
+                    child: AppFloatingIndicatorButtonGroup(
+                      child: Column(
+                        children: widget.childrenBuilder(context, controller),
+                      ),
+                    ),
+                  );
+                },
           ),
         ),
       ],
@@ -1782,7 +1860,7 @@ class AppRawSwitch extends StatelessWidget {
   }
 }
 
-class AppSwitchButton extends StatefulWidget{
+class AppSwitchButton extends StatefulWidget {
   final Duration duration;
   final Curve curve;
 
@@ -1835,9 +1913,9 @@ class AppSwitchButton extends StatefulWidget{
   State<AppSwitchButton> createState() => _AppSwitchButtonState();
 }
 
-class _AppSwitchButtonState extends State<AppSwitchButton>{
+class _AppSwitchButtonState extends State<AppSwitchButton> {
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     final Widget switchWidget = AppRawSwitch(value: widget.value);
 
     return AppButton(
@@ -1858,23 +1936,25 @@ class _AppSwitchButtonState extends State<AppSwitchButton>{
       isTranslate: widget.isTranslate,
       toolTipShortcut: widget.toolTipShortcut,
       usable: widget.usable,
-      onClick: (){
-        setState((){
+      onClick: () {
+        setState(() {
           widget.onChanged?.call(!widget.value);
         });
       },
-      child: widget.child == null ? switchWidget : Row(
-        children: [
-          Expanded(child: widget.child!),
+      child: widget.child == null
+          ? switchWidget
+          : Row(
+              children: [
+                Expanded(child: widget.child!),
 
-          switchWidget,
-        ],
-      ),
+                switchWidget,
+              ],
+            ),
     );
   }
 }
 
-class AppCachedNetworkImage extends StatelessWidget{
+class AppCachedNetworkImage extends StatelessWidget {
   final String imageUrl;
   final String? cacheKey;
   final Widget Function(BuildContext, String, Object)? errorWidget;
@@ -1897,17 +1977,17 @@ class AppCachedNetworkImage extends StatelessWidget{
   });
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return CachedNetworkImage(
       imageUrl: imageUrl,
       cacheKey: cacheKey,
       fadeInDuration: animationTime,
       fadeOutDuration: animationTime,
-      errorWidget: errorWidget ?? (BuildContext context, String url, Object error){
-        return Center(
-          child: AppText("?"),
-        );
-      },
+      errorWidget:
+          errorWidget ??
+          (BuildContext context, String url, Object error) {
+            return Center(child: AppText("?"));
+          },
       width: width,
       height: height,
       fit: fit,
@@ -1917,7 +1997,7 @@ class AppCachedNetworkImage extends StatelessWidget{
   }
 }
 
-class AppSuperTooltip extends StatelessWidget{
+class AppSuperTooltip extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double? width;
   final double? height;
@@ -1938,7 +2018,7 @@ class AppSuperTooltip extends StatelessWidget{
   });
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return SuperTooltip(
       style: TooltipStyle(
         backgroundColor: AppColorScheme.of(context).byRole(colorRole).color,
@@ -1947,30 +2027,22 @@ class AppSuperTooltip extends StatelessWidget{
         shadowColor: Colors.black12,
         bubbleDimensions: const EdgeInsets.all(0),
       ),
-      positionConfig: PositionConfiguration(
-        preferredDirection: direction,
-      ),
-      barrierConfig: BarrierConfiguration(
-        color: Colors.transparent,
-      ),
+      positionConfig: PositionConfiguration(preferredDirection: direction),
+      barrierConfig: BarrierConfiguration(color: Colors.transparent),
       animationConfig: AnimationConfiguration(
         fadeInDuration: animationTime,
         fadeOutDuration: animationTime,
       ),
       content: Padding(
         padding: padding,
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: content,
-        ),
+        child: SizedBox(width: width, height: height, child: content),
       ),
       child: child,
     );
   }
 }
 
-class AppTab extends StatefulWidget{
+class AppTab extends StatefulWidget {
   final Axis direction;
   final double spacing;
   final int initIndex;
@@ -1992,37 +2064,43 @@ class AppTab extends StatefulWidget{
   State<AppTab> createState() => _AppTabState();
 }
 
-class _AppTabState extends State<AppTab>{
+class _AppTabState extends State<AppTab> {
   final List<Widget> navList = [];
   final List<Widget> pageList = [];
   late int currentPage;
   late final PageController controller;
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
 
     currentPage = widget.initIndex;
     controller = PageController(initialPage: widget.initIndex);
 
-    for(final (index, child) in widget.children.indexed){
-      navList.add(GestureDetector(
-        onTap: (){
-          currentPage = index;
-          controller.animateToPage(index, duration: widget.duration, curve: widget.curve);
-        },
-        child: child.nav,
-      ));
+    for (final (index, child) in widget.children.indexed) {
+      navList.add(
+        GestureDetector(
+          onTap: () {
+            currentPage = index;
+            controller.animateToPage(
+              index,
+              duration: widget.duration,
+              curve: widget.curve,
+            );
+          },
+          child: child.nav,
+        ),
+      );
       pageList.add(child.page);
     }
   }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     final List<Widget> children = [
       ListenableBuilder(
         listenable: controller,
-        builder: (BuildContext context, Widget? child){
+        builder: (BuildContext context, Widget? child) {
           return AppRadioStack(
             direction: widget.direction,
             selectedIndex: currentPage,
@@ -2043,10 +2121,11 @@ class _AppTabState extends State<AppTab>{
     ];
 
     return Flex(
-      direction: widget.direction == Axis.horizontal ? Axis.vertical : Axis.horizontal,
+      direction: widget.direction == Axis.horizontal
+          ? Axis.vertical
+          : Axis.horizontal,
       spacing: widget.spacing,
       children: children,
     );
   }
 }
-
