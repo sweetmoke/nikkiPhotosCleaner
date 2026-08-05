@@ -1280,32 +1280,6 @@ class _ToolBarState extends State<ToolBar> {
                 );
               }),
 
-              /// Export selected High Quality originals, then recycle the
-              /// originals and any user-selected matching versions.
-              gameListenerBuilder(game, (
-                bool isExistSelectedImage,
-                bool isAllowBackup,
-              ) {
-                final bool usable =
-                    isExistSelectedImage &&
-                    game.selectedAlbum == AlbumType.NikkiPhotos_HighQuality &&
-                    game.selectedUid?.value != null;
-
-                return AppFloatingIndicatorButtonTarget(
-                  isTarget: usable,
-                  child: AppButton.smallIcon(
-                    toolTip: usable ? "exportHighQualityAndCleanup" : "",
-                    onClick: () {
-                      AlbumHandler.of(
-                        context,
-                      ).openHighQualityExportCleanup(context, game);
-                    },
-                    usable: usable,
-                    child: AppIcon("save", height: 18),
-                  ),
-                );
-              }),
-
               AppDivider(direction: Axis.vertical),
 
               /// 移出
@@ -1373,6 +1347,32 @@ class _ToolBarState extends State<ToolBar> {
                     },
                     usable: usable,
                     child: AppIcon("delete", height: 20),
+                  ),
+                );
+              }),
+
+              /// Export selected High Quality originals, then recycle the
+              /// originals and any user-selected matching versions.
+              gameListenerBuilder(game, (
+                bool isExistSelectedImage,
+                bool isAllowBackup,
+              ) {
+                final bool usable =
+                    isExistSelectedImage &&
+                    game.selectedAlbum == AlbumType.NikkiPhotos_HighQuality &&
+                    game.selectedUid?.value != null;
+
+                return AppFloatingIndicatorButtonTarget(
+                  isTarget: usable,
+                  child: AppButton.smallIcon(
+                    toolTip: usable ? "exportHighQualityAndCleanup" : "",
+                    onClick: () {
+                      AlbumHandler.of(
+                        context,
+                      ).openHighQualityExportCleanup(context, game);
+                    },
+                    usable: usable,
+                    child: AppIcon("save", height: 18),
                   ),
                 );
               }),
