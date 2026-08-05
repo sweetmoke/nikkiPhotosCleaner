@@ -1,4 +1,10 @@
 {
+  "exportHighQualityAndCleanup": "Export High Quality and clean up",
+  "exportCleanupConfirmation": "Export {} selected High Quality image(s) to:\n{}\n\nAfter each copy is verified, its High Quality source will be moved to the app recycle bin.",
+  "exportCleanupHighQualityNotice": "The High Quality source is always cleaned up after a successful export.",
+  "exportCleanupSelectVersions": "Also clean up matching versions from:",
+  "exportAndCleanup": "Export and clean up",
+  "exportCleanupResult": "Exported: {}  ·  Export failed: {}  ·  Cleanup failed: {}",
   "nikkialbums": "Nikki Albums",
   "info": "This software is still in the testing phase and does not represent the final quality.\n",
   "----------common----------": "----------common----------",

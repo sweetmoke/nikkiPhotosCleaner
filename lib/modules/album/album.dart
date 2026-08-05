@@ -1,4 +1,3 @@
-
 import "album_view.dart";
 import "album_previewer.dart";
 import "package:nikki_albums/info.dart";
@@ -78,6 +77,132 @@ class AlbumValuePool extends InheritedWidget {
 
 class AlbumHandler {
   const AlbumHandler();
+
+  Future<Path> _availableExportPath(Path root, String filename) async {
+    final String extension = p.extension(filename);
+    final String basename = p.basenameWithoutExtension(filename);
+    Path candidate = root + filename;
+    int suffix = 1;
+
+    while (await candidate.file.exists()) {
+      candidate = root + "$basename ($suffix)$extension";
+      suffix++;
+    }
+    return candidate;
+  }
+
+  Future<void> exportHighQualityAndCleanup(
+    BuildContext context,
+    Game game,
+    List<ImageItem> images,
+    String savePath,
+    Map<AlbumType, bool> chainDeletion,
+  ) async {
+    final ValueNotifier<double> progress = ValueNotifier<double>(0);
+    final List<ImageItem> exportedImages = <ImageItem>[];
+    int exportErrorCount = 0;
+    int cleanupErrorCount = 0;
+
+    if (context.mounted) {
+      showProgressBar(
+        context: context,
+        barrierDismissible: false,
+        autoClose: false,
+        valueListenable: progress,
+        completedBuilder: (BuildContext context, void Function() close) {
+          return Column(
+            spacing: listSpacing,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppText(
+                context.tr(
+                  "exportCleanupResult",
+                  args: [
+                    exportedImages.length.toString(),
+                    exportErrorCount.toString(),
+                    cleanupErrorCount.toString(),
+                  ],
+                ),
+              ),
+              AppButton.smallText(
+                width: null,
+                colorRole: ColorRole.highlight,
+                isTransparent: false,
+                onClick: close,
+                child: AppText.tr("close"),
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    final Path root = Path(savePath);
+    if (!await root.directory.exists()) {
+      await root.directory.create(recursive: true);
+    }
+
+    for (int index = 0; index < images.length; index++) {
+      final ImageItem item = images[index];
+      try {
+        final Path destination = await _availableExportPath(root, item.name);
+        final File copiedFile = await item.path.file.copy(destination.path);
+        final int sourceLength = await item.path.file.length();
+        final int copiedLength = await copiedFile.length();
+        if (sourceLength != copiedLength) {
+          await copiedFile.delete();
+          throw const FileSystemException("Export verification failed");
+        }
+        exportedImages.add(item);
+      } catch (_) {
+        exportErrorCount++;
+      }
+      progress.value = images.isEmpty ? 0.5 : 0.5 * (index + 1) / images.length;
+    }
+
+    if (exportedImages.isNotEmpty) {
+      final (_, int errors) = await game.recycleExportedHighQualityImages(
+        exportedImages,
+        chainDeletion,
+        onProgress: (double value) {
+          progress.value = 0.5 + 0.5 * value;
+        },
+      );
+      cleanupErrorCount = errors;
+    }
+
+    progress.value = 1;
+  }
+
+  Future<void> openHighQualityExportCleanup(
+    BuildContext context,
+    Game game,
+  ) async {
+    final List<ImageItem> images = game.album.selectedImages.toList(
+      growable: false,
+    );
+    if (game.selectedAlbum != AlbumType.NikkiPhotos_HighQuality ||
+        images.isEmpty ||
+        game.selectedUid?.value == null) {
+      return;
+    }
+
+    final String? location = await NativeFilePicker.getDirectoryPath(
+      dialogTitle: context.tr("exportHighQualityAndCleanup"),
+      lockParentWindow: true,
+    );
+    if (location == null || !context.mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) => ExportCleanupDialog(
+        hostContext: context,
+        game: game,
+        images: images,
+        savePath: location,
+      ),
+    );
+  }
 
   void refresh(Game game) {
     game.refresh();
@@ -286,7 +411,11 @@ class AlbumHandler {
   }
 
   /// export images to native device
-  Future<void> exportToLocal(BuildContext context, List<ImageItem> images, {String? savePath}) async{
+  Future<void> exportToLocal(
+    BuildContext context,
+    List<ImageItem> images, {
+    String? savePath,
+  }) async {
     final String liveFormat = AppState.livePhotoExportFormat.value;
     final bool isVideoAlbum =
         AppState.currentGame.value?.selectedAlbum == AlbumType.Video;
@@ -298,15 +427,15 @@ class AlbumHandler {
     }
 
     late final String? location;
-    if(savePath != null){
+    if (savePath != null) {
       location = savePath;
-    }else{
-      if(context.mounted){
+    } else {
+      if (context.mounted) {
         location = await NativeFilePicker.getDirectoryPath(
           dialogTitle: context.plural("exportXImage", images.length),
           lockParentWindow: true,
         );
-      }else{
+      } else {
         location = null;
       }
     }
@@ -663,7 +792,7 @@ class AlbumHandler {
   }
 
   /// export option
-  void openExportSetting(BuildContext context){
+  void openExportSetting(BuildContext context) {
     SettingDialog.show(context, initialPage: SettingPage.exportingImageSetting);
   }
 
@@ -1147,6 +1276,32 @@ class _ToolBarState extends State<ToolBar> {
                         ? false
                         : usable,
                     child: AppIcon("view", height: 18),
+                  ),
+                );
+              }),
+
+              /// Export selected High Quality originals, then recycle the
+              /// originals and any user-selected matching versions.
+              gameListenerBuilder(game, (
+                bool isExistSelectedImage,
+                bool isAllowBackup,
+              ) {
+                final bool usable =
+                    isExistSelectedImage &&
+                    game.selectedAlbum == AlbumType.NikkiPhotos_HighQuality &&
+                    game.selectedUid?.value != null;
+
+                return AppFloatingIndicatorButtonTarget(
+                  isTarget: usable,
+                  child: AppButton.smallIcon(
+                    toolTip: usable ? "exportHighQualityAndCleanup" : "",
+                    onClick: () {
+                      AlbumHandler.of(
+                        context,
+                      ).openHighQualityExportCleanup(context, game);
+                    },
+                    usable: usable,
+                    child: AppIcon("save", height: 18),
                   ),
                 );
               }),
@@ -1757,15 +1912,20 @@ class _ExhibitState extends State<Exhibit> {
     );
   }
 
-  Future<void> _showParamItemEditPanel(BuildContext context, ParamBoxManager manager, [String? initCode, ParamItemCover? initCover]) async{
-    if(!manager.isInit){
+  Future<void> _showParamItemEditPanel(
+    BuildContext context,
+    ParamBoxManager manager, [
+    String? initCode,
+    ParamItemCover? initCover,
+  ]) async {
+    if (!manager.isInit) {
       await manager.init();
     }
-    if(!manager.isInit){
+    if (!manager.isInit) {
       return;
     }
 
-    if(!context.mounted){
+    if (!context.mounted) {
       return;
     }
     final ParamItemEditController controller = ParamItemEditController(
@@ -1775,33 +1935,43 @@ class _ExhibitState extends State<Exhibit> {
 
     showAppDialog(
       context: context,
-      builder: (BuildContext context){
+      builder: (BuildContext context) {
         return AppDialog(
           useIntrinsicHeight: false,
           child: ParamItemEditPanel(
             manager: manager,
             controller: controller,
-            onCancel: (){
+            onCancel: () {
               controller.dispose();
               Navigator.of(context).pop();
             },
-            onFinish: (ParamItemCreation creation) async{
-              if(context.mounted){
-                AppToast.showMessage(context: context, message: context.tr("parameter_manager.on_save"));
+            onFinish: (ParamItemCreation creation) async {
+              if (context.mounted) {
+                AppToast.showMessage(
+                  context: context,
+                  message: context.tr("parameter_manager.on_save"),
+                );
               }
-              try{
+              try {
                 await manager.createItem(creation);
                 await manager.save();
-                if(context.mounted){
-                  AppToast.showMessage(context: context, message: context.tr("parameter_manager.save_successful"));
+                if (context.mounted) {
+                  AppToast.showMessage(
+                    context: context,
+                    message: context.tr("parameter_manager.save_successful"),
+                  );
                 }
-              }catch(e){
-                if(context.mounted){
-                  AppToast.showMessage(context: context, message: "${context.tr("parameter_manager.save_failed")}\n$e");
+              } catch (e) {
+                if (context.mounted) {
+                  AppToast.showMessage(
+                    context: context,
+                    message:
+                        "${context.tr("parameter_manager.save_failed")}\n$e",
+                  );
                 }
-              }finally{
+              } finally {
                 controller.dispose();
-                if(context.mounted){
+                if (context.mounted) {
                   Navigator.of(context).pop();
                 }
               }
@@ -1812,17 +1982,19 @@ class _ExhibitState extends State<Exhibit> {
     );
   }
 
-  Widget _generateParamSaverButton(BuildContext context, bool isHover){
-    if(!isHover){
+  Widget _generateParamSaverButton(BuildContext context, bool isHover) {
+    if (!isHover) {
       return block0;
     }
 
     final AlbumType albumType = widget.game.selectedAlbum;
-    if(albumType != AlbumType.NikkiPhotos_HighQuality && albumType != AlbumType.ClockInPhoto && albumType != AlbumType.DIY){
+    if (albumType != AlbumType.NikkiPhotos_HighQuality &&
+        albumType != AlbumType.ClockInPhoto &&
+        albumType != AlbumType.DIY) {
       return block0;
     }
 
-    if(widget.game.selectedUid?.value == null){
+    if (widget.game.selectedUid?.value == null) {
       return block0;
     }
 
@@ -1834,38 +2006,54 @@ class _ExhibitState extends State<Exhibit> {
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
-          onTap: () async{
-            final ParamBoxManager globalManager = await GlobalParamBoxManagerBuilder.getGlobalManager(AppState.customParamBoxPath.value);
+          onTap: () async {
+            final ParamBoxManager globalManager =
+                await GlobalParamBoxManagerBuilder.getGlobalManager(
+                  AppState.customParamBoxPath.value,
+                );
 
-            final MediaCustomData? customData = await widget.imageItem.getParam(widget.game.selectedUid!.value, widget.game.selectedAlbum);
+            final MediaCustomData? customData = await widget.imageItem.getParam(
+              widget.game.selectedUid!.value,
+              widget.game.selectedAlbum,
+            );
 
             customData?.whenOrNull(
-              valid: (MediaParam mediaParam){
+              valid: (MediaParam mediaParam) {
                 mediaParam.whenOrNull(
-                  nikkiPhoto: (NikkiPhotoParams nikkiPhotoParams){
+                  nikkiPhoto: (NikkiPhotoParams nikkiPhotoParams) {
                     final String? code = nikkiPhotoParams.camera?.params;
-                    if(code == null){
+                    if (code == null) {
                       return;
                     }
 
-                    _showParamItemEditPanel(context, globalManager, code, NativeParamItemCover(
-                      path: widget.imageItem.path.path,
-                      isCache: false,
-                    ));
+                    _showParamItemEditPanel(
+                      context,
+                      globalManager,
+                      code,
+                      NativeParamItemCover(
+                        path: widget.imageItem.path.path,
+                        isCache: false,
+                      ),
+                    );
                   },
-                  clockInPhoto: (ClockInPhotoParams clockInPhotoParams){
+                  clockInPhoto: (ClockInPhotoParams clockInPhotoParams) {
                     final String? code = clockInPhotoParams.camera?.params;
-                    if(code == null){
+                    if (code == null) {
                       return;
                     }
 
-                    _showParamItemEditPanel(context, globalManager, code, NativeParamItemCover(
-                      path: widget.imageItem.path.path,
-                      isCache: false,
-                    ));
+                    _showParamItemEditPanel(
+                      context,
+                      globalManager,
+                      code,
+                      NativeParamItemCover(
+                        path: widget.imageItem.path.path,
+                        isCache: false,
+                      ),
+                    );
                   },
-                  diy: (ClothDiyParams clothDiyParams) async{
-                    if(widget.game.selectedUid == null){
+                  diy: (ClothDiyParams clothDiyParams) async {
+                    if (widget.game.selectedUid == null) {
                       return;
                     }
 
@@ -1875,18 +2063,24 @@ class _ExhibitState extends State<Exhibit> {
                       uid: widget.game.selectedUid!.value,
                     );
 
-                    if(context.mounted){
-                      if(code == null){
+                    if (context.mounted) {
+                      if (code == null) {
                         AppToast.showMessage(
                           context: context,
-                          message: "${context.tr("parameter_manager.diy_image_have_no_share_code")}\n${context.tr("parameter_manager.diy_image_have_no_share_code_tip")}",
-                          state: false
+                          message:
+                              "${context.tr("parameter_manager.diy_image_have_no_share_code")}\n${context.tr("parameter_manager.diy_image_have_no_share_code_tip")}",
+                          state: false,
                         );
-                      }else{
-                        _showParamItemEditPanel(context, globalManager, code, NativeParamItemCover(
-                          path: widget.imageItem.path.path,
-                          isCache: false,
-                        ));
+                      } else {
+                        _showParamItemEditPanel(
+                          context,
+                          globalManager,
+                          code,
+                          NativeParamItemCover(
+                            path: widget.imageItem.path.path,
+                            isCache: false,
+                          ),
+                        );
                       }
                     }
                   },
@@ -1894,47 +2088,56 @@ class _ExhibitState extends State<Exhibit> {
               },
             );
           },
-          child: AppIcon("parameter_manager", color: AppColorScheme.of(context).highlight.onColor),
+          child: AppIcon(
+            "parameter_manager",
+            color: AppColorScheme.of(context).highlight.onColor,
+          ),
         ),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return RFutureBuilder(
-      future: Future((){
-        if(widget.imageItem.cover == null){
+      future: Future(() {
+        if (widget.imageItem.cover == null) {
           return MediaThumbnail.fromCache(
             id: "${widget.imageItem.name}${widget.imageItem.time}",
-            imagePath: Path(widget.imageItem.thumbnail ?? widget.imageItem.path.path),
+            imagePath: Path(
+              widget.imageItem.thumbnail ?? widget.imageItem.path.path,
+            ),
             targetWidth: 720,
             isVideo: widget.imageItem.isVideo,
           );
-        }else{
+        } else {
           return MediaThumbnail.fromCache(
             id: "${widget.imageItem.cover}${widget.imageItem.time}",
-            imagePath: Path(widget.imageItem.thumbnail ?? widget.imageItem.cover!),
+            imagePath: Path(
+              widget.imageItem.thumbnail ?? widget.imageItem.cover!,
+            ),
             targetWidth: 720,
             isVideo: false,
           );
         }
       }),
-      builder: (context, image){
+      builder: (context, image) {
         final Widget exhibit = NotifierBuilder(
           listenable: widget.game.album.whenSelectedImagesChange,
-          builder: (BuildContext context, Widget? child){
-            final bool isSelected = widget.game.album.selectedImages.contains(widget.imageItem);
+          builder: (BuildContext context, Widget? child) {
+            final bool isSelected = widget.game.album.selectedImages.contains(
+              widget.imageItem,
+            );
 
             return Stack(
               children: [
                 Positioned.fill(
                   child: RawImage(image: image, fit: BoxFit.cover),
                 ),
-                if(isSelected)
+                if (isSelected)
                   Positioned.fill(child: ColoredBox(color: Color(0x66000000))),
 
-                if(isSelected)
+                if (isSelected)
                   Positioned(
                     left: smallPadding,
                     top: smallPadding,
@@ -1944,14 +2147,20 @@ class _ExhibitState extends State<Exhibit> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: AppTheme.of(context)!.colorScheme.secondary.onColor,
+                          color: AppTheme.of(
+                            context,
+                          )!.colorScheme.secondary.onColor,
                           width: smallBorder,
                         ),
-                        color: AppTheme.of(context)!.colorScheme.secondary.onColor,
+                        color: AppTheme.of(
+                          context,
+                        )!.colorScheme.secondary.onColor,
                       ),
                       child: Image.asset(
                         "assets/icon/tick.webp",
-                        color: AppTheme.of(context)!.colorScheme.secondary.color,
+                        color: AppTheme.of(
+                          context,
+                        )!.colorScheme.secondary.color,
                       ),
                     ),
                   ),
@@ -1961,23 +2170,27 @@ class _ExhibitState extends State<Exhibit> {
         );
 
         final Widget groundLayout = Listener(
-          onPointerDown: (e){
-            if(e.kind == PointerDeviceKind.mouse && e.buttons == kPrimaryMouseButton){
+          onPointerDown: (e) {
+            if (e.kind == PointerDeviceKind.mouse &&
+                e.buttons == kPrimaryMouseButton) {
               widget.game.album.invertImage(widget.imageItem);
             }
-            if(e.kind == PointerDeviceKind.mouse && e.buttons == kSecondaryMouseButton){
+            if (e.kind == PointerDeviceKind.mouse &&
+                e.buttons == kSecondaryMouseButton) {
               showAppDialog(
                 context: context,
-                builder: (BuildContext context){
+                builder: (BuildContext context) {
                   return RFutureBuilder(
                     future: widget.game.album.images,
-                    builder: (BuildContext context, Set<ImageItem> images){
-                      if(widget.imageItem.isVideo){
+                    builder: (BuildContext context, Set<ImageItem> images) {
+                      if (widget.imageItem.isVideo) {
                         return VideoViewerDialog(video: widget.imageItem);
-                      }else{
+                      } else {
                         return ImageViewerDialog(
                           game: widget.game,
-                          images: widget.game.album.sortImages(images).toList(growable: false),
+                          images: widget.game.album
+                              .sortImages(images)
+                              .toList(growable: false),
                           initImage: widget.imageItem,
                         );
                       }
@@ -1993,43 +2206,54 @@ class _ExhibitState extends State<Exhibit> {
         bool isHover = false;
 
         return StatefulBuilder(
-          builder: (BuildContext context, void Function(void Function()) setButtonState){
-            return MouseRegion(
-              onEnter: (_) {
-                final bool isPrimaryMouseDown = AlbumValuePool.of(context).isPrimaryMouseDown.value;
-                final bool isDragScrollbar = AlbumValuePool.of(context).isDragScrollbar.value;
-                final bool isPressTag = AlbumValuePool.of(context).isPressTag.value;
-                // 长按多选
-                if(isPrimaryMouseDown && !isDragScrollbar && !isPressTag){
-                  widget.game.album.invertImage(widget.imageItem);
-                }
+          builder:
+              (
+                BuildContext context,
+                void Function(void Function()) setButtonState,
+              ) {
+                return MouseRegion(
+                  onEnter: (_) {
+                    final bool isPrimaryMouseDown = AlbumValuePool.of(
+                      context,
+                    ).isPrimaryMouseDown.value;
+                    final bool isDragScrollbar = AlbumValuePool.of(
+                      context,
+                    ).isDragScrollbar.value;
+                    final bool isPressTag = AlbumValuePool.of(
+                      context,
+                    ).isPressTag.value;
+                    // 长按多选
+                    if (isPrimaryMouseDown && !isDragScrollbar && !isPressTag) {
+                      widget.game.album.invertImage(widget.imageItem);
+                    }
 
-                setButtonState((){
-                  isHover = true;
-                });
-              },
-              onHover: (_){
-                setButtonState((){
-                  isHover = true;
-                });
-              },
-              onExit: (_){
-                setButtonState((){
-                  isHover = false;
-                });
-              },
-              child: Stack(
-                children: [
-                  groundLayout,
+                    setButtonState(() {
+                      isHover = true;
+                    });
+                  },
+                  onHover: (_) {
+                    setButtonState(() {
+                      isHover = true;
+                    });
+                  },
+                  onExit: (_) {
+                    setButtonState(() {
+                      isHover = false;
+                    });
+                  },
+                  child: Stack(
+                    children: [
+                      groundLayout,
 
-                  if(widget.game.selectedAlbum != AlbumType.Video && widget.game.selectedAlbum != AlbumType.ExternalVideo)
-                    _generateTagButton(context, isHover),
+                      if (widget.game.selectedAlbum != AlbumType.Video &&
+                          widget.game.selectedAlbum != AlbumType.ExternalVideo)
+                        _generateTagButton(context, isHover),
 
-                  _generateParamSaverButton(context, isHover),
-                ],
-              ),
-            );
-          },
+                      _generateParamSaverButton(context, isHover),
+                    ],
+                  ),
+                );
+              },
         );
       },
     );
@@ -3124,7 +3348,7 @@ class FiltrationButton extends StatelessWidget {
                         filtration == Filtration.onlyRiskTask ||
                         filtration == Filtration.onlyPhotoWall) {
                       final ValueNotifier<double?> progress =
-                      ValueNotifier<double?>(null);
+                          ValueNotifier<double?>(null);
                       bool cancel = false;
 
                       if (context.mounted) {
@@ -3146,13 +3370,16 @@ class FiltrationButton extends StatelessWidget {
 
                       final Set<ImageItem> images = await game.album.images;
 
-                      if (game.selectedUid?.value != null && images.isNotEmpty) {
+                      if (game.selectedUid?.value != null &&
+                          images.isNotEmpty) {
                         int count = 0;
                         final int total = images.length;
 
                         await InfinityNikkiParamCodec.decodeFilesUncheckedStream(
                           MediaParamType.nikkiPhoto,
-                          images.map((ImageItem item) => item.path.path).toList(),
+                          images
+                              .map((ImageItem item) => item.path.path)
+                              .toList(),
                           uid: game.selectedUid?.value,
                           callback: (String path, MediaCustomData? data) {
                             progress.value = (count++ / total).clamp(0, 1);
@@ -3207,17 +3434,18 @@ class FiltrationButton extends StatelessWidget {
       listenable: game,
       builder: (BuildContext context, Widget? child) {
         return AppDropdown(
-          builder: (BuildContext context, MenuController controller, Widget? child){
-            return AppButton.smallIcon(
-              toolTip: "filter",
-              colorRole: ColorRole.secondary,
-              onClick: (){
-                controller.isOpen ? controller.close() : controller.open();
+          builder:
+              (BuildContext context, MenuController controller, Widget? child) {
+                return AppButton.smallIcon(
+                  toolTip: "filter",
+                  colorRole: ColorRole.secondary,
+                  onClick: () {
+                    controller.isOpen ? controller.close() : controller.open();
+                  },
+                  child: AppIcon("filtration", height: 20),
+                );
               },
-              child: AppIcon("filtration", height: 20),
-            );
-          },
-          childrenBuilder: (BuildContext context, MenuController controller){
+          childrenBuilder: (BuildContext context, MenuController controller) {
             return [
               AppFloatingIndicatorButtonGroup(
                 child: Column(
@@ -3331,6 +3559,177 @@ class SelectionViewerDialog extends StatelessWidget {
           topBar,
           Expanded(child: viewer),
         ],
+      ),
+    );
+  }
+}
+
+class ExportCleanupDialog extends StatelessWidget {
+  final BuildContext hostContext;
+  final Game game;
+  final List<ImageItem> images;
+  final String savePath;
+  final ManualValueNotifier<Map<AlbumType, bool>> chainDeletion;
+
+  ExportCleanupDialog({
+    super.key,
+    required this.hostContext,
+    required this.game,
+    required this.images,
+    required this.savePath,
+  }) : chainDeletion = ManualValueNotifier(
+         Map<AlbumType, bool>.from(
+           albumsInfoMap[AlbumType.NikkiPhotos_HighQuality]?.chainDeletion ??
+               <AlbumType, bool>{},
+         ),
+       );
+
+  void _cancel(BuildContext context) {
+    Navigator.of(context).pop();
+  }
+
+  void _confirm(BuildContext context) {
+    final Map<AlbumType, bool> selectedChain = Map<AlbumType, bool>.from(
+      chainDeletion.value,
+    );
+    Navigator.of(context).pop();
+    if (!hostContext.mounted) return;
+    AlbumHandler.of(hostContext).exportHighQualityAndCleanup(
+      hostContext,
+      game,
+      images,
+      savePath,
+      selectedChain,
+    );
+  }
+
+  Widget _option(BuildContext context, AlbumType type) {
+    return ManualValueNotifierBuilder(
+      valueListenable: chainDeletion,
+      builder: (BuildContext context, Map<AlbumType, bool> chain, Widget? child) {
+        final bool selected = chain[type] ?? false;
+        final Widget tickBox = Container(
+          decoration: BoxDecoration(
+            color: selected
+                ? AppTheme.of(context)!.colorScheme.highlight.color
+                : Colors.transparent,
+            border: Border.all(
+              color: selected
+                  ? AppTheme.of(context)!.colorScheme.highlight.color
+                  : AppTheme.of(context)!.colorScheme.secondary.onColor,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(0.5 * smallButtonContentSize),
+          ),
+          child: selected
+              ? Image.asset(
+                  "assets/icon/tick.webp",
+                  color: AppTheme.of(context)!.colorScheme.highlight.onColor,
+                )
+              : null,
+        );
+
+        return AppButton.smallText(
+          padding: const EdgeInsets.symmetric(horizontal: smallPadding),
+          height: mediumButtonSize,
+          colorRole: ColorRole.background,
+          onClick: () {
+            chain[type] = !selected;
+            chainDeletion.notify();
+          },
+          child: Row(
+            spacing: listSpacing,
+            children: [
+              SizedBox(
+                width: smallButtonContentSize,
+                height: smallButtonContentSize,
+                child: ClipRRect(
+                  borderRadius: BorderRadiusGeometry.all(
+                    Radius.circular(0.5 * smallButtonContentSize),
+                  ),
+                  child: tickBox,
+                ),
+              ),
+              AppText(
+                "${context.tr(albumsInfoMap[type]!.name)} ( ${albumsInfoMap[type]!.type} )",
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(dialogBorderRadius),
+      ),
+      backgroundColor: AppTheme.of(context)!.colorScheme.background.color,
+      child: Container(
+        padding: const EdgeInsets.all(bigPadding),
+        constraints: const BoxConstraints(maxWidth: smallDialogMaxWidth),
+        child: Column(
+          spacing: listSpacing,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AppText.tr(
+                "exportHighQualityAndCleanup",
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AppText(
+                context.tr(
+                  "exportCleanupConfirmation",
+                  args: [images.length.toString(), savePath],
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AppText.tr(
+                "exportCleanupHighQualityNotice",
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            AppDivider(),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AppText.tr("exportCleanupSelectVersions"),
+            ),
+            ...chainDeletion.value.keys.map(
+              (AlbumType type) => _option(context, type),
+            ),
+            block5H,
+            Row(
+              spacing: listSpacing,
+              children: [
+                Expanded(
+                  child: AppButton.smallText(
+                    colorRole: ColorRole.background,
+                    isTransparent: false,
+                    onClick: () => _cancel(context),
+                    child: AppText.tr("cancel"),
+                  ),
+                ),
+                Expanded(
+                  child: AppButton.smallText(
+                    colorRole: ColorRole.highlight,
+                    isTransparent: false,
+                    onClick: () => _confirm(context),
+                    child: AppText.tr("exportAndCleanup"),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -3544,20 +3943,23 @@ class ExportImagesButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return MenuAnchor(
       style: MenuStyle(
-        backgroundColor: WidgetStateProperty.all(AppTheme.of(context)!.colorScheme.background.color),
+        backgroundColor: WidgetStateProperty.all(
+          AppTheme.of(context)!.colorScheme.background.color,
+        ),
       ),
-      builder: (BuildContext context, MenuController controller, Widget? child){
-        return AppButton.smallIcon(
-          toolTip: usable ? context.tr("export") : "",
-          isTranslate: false,
-          colorRole: ColorRole.secondary,
-          onClick: (){
-            controller.isOpen ? controller.close() : controller.open();
+      builder:
+          (BuildContext context, MenuController controller, Widget? child) {
+            return AppButton.smallIcon(
+              toolTip: usable ? context.tr("export") : "",
+              isTranslate: false,
+              colorRole: ColorRole.secondary,
+              onClick: () {
+                controller.isOpen ? controller.close() : controller.open();
+              },
+              usable: usable,
+              child: AppIcon("export", height: 18),
+            );
           },
-          usable: usable,
-          child: AppIcon("export", height: 18),
-        );
-      },
       menuChildren: [
         /// copy images to clipboard
         MenuItemButton(
@@ -3623,12 +4025,14 @@ class ExportImagesButton extends StatelessWidget {
 
         ValueListenableBuilder(
           valueListenable: AppState.exportingImageDirs,
-          builder: (BuildContext _, Map dirs, Widget? child){
+          builder: (BuildContext _, Map dirs, Widget? child) {
             return Column(
-              children: dirs.keys.whereType<String>().map((String key){
+              children: dirs.keys.whereType<String>().map((String key) {
                 return MenuItemButton(
-                  onPressed: (){
-                    AlbumHandler.of(context).exportToLocal(context, images, savePath: dirs[key]);
+                  onPressed: () {
+                    AlbumHandler.of(
+                      context,
+                    ).exportToLocal(context, images, savePath: dirs[key]);
                   },
                   child: AppText(context.tr("export_toX", args: [key])),
                 );

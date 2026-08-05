@@ -1,4 +1,10 @@
 {
+  "exportHighQualityAndCleanup": "匯出高畫質圖片並清理",
+  "exportCleanupConfirmation": "將選取的 {} 張高畫質圖片匯出至：\n{}\n\n每張圖片複製並驗證成功後，其 High Quality 來源檔案將移入軟體回收站。",
+  "exportCleanupHighQualityNotice": "匯出成功後，High Quality 來源檔案固定清理，無法取消。",
+  "exportCleanupSelectVersions": "同時清理下列相簿中的同名版本：",
+  "exportAndCleanup": "匯出並清理",
+  "exportCleanupResult": "成功匯出：{}　匯出失敗：{}　清理失敗：{}",
   "nikkialbums": "暖暖相冊",
   "info": "該軟體還在測試階段, 不代表最終品質\n QQ交流群: 1062670402\n",
   "----------common----------": "----------common----------",

@@ -600,6 +600,97 @@ class Game extends ChangeNotifier with AlbumPath {
     onError?.call(errorImages);
   }
 
+  /// Moves exported High Quality originals and the user-selected matching
+  /// versions into the app recycle bin. Only call this after the destination
+  /// copy has been verified successfully.
+  Future<(Set<ImageItem> recycledSources, int errorCount)>
+  recycleExportedHighQualityImages(
+    List<ImageItem> images,
+    Map<AlbumType, bool> chainDeletion, {
+    void Function(double progress)? onProgress,
+  }) async {
+    if (images.isEmpty) {
+      onProgress?.call(1);
+      return (<ImageItem>{}, 0);
+    }
+
+    final String msSinceEpoch = DateTime.now().millisecondsSinceEpoch
+        .toString();
+    final String? uid = selectedUid?.value;
+    final Set<ImageItem> recycledSources = <ImageItem>{};
+    int errorCount = 0;
+    int current = 0;
+
+    for (final ImageItem item in images) {
+      final bool sourceRecycled = await _recycleOrDeleteImage(
+        item.path,
+        msSinceEpoch,
+        AlbumType.NikkiPhotos_HighQuality,
+        uid,
+        false,
+      );
+      if (sourceRecycled) {
+        recycledSources.add(item);
+      } else {
+        errorCount++;
+      }
+
+      for (final MapEntry<AlbumType, bool> chain in chainDeletion.entries) {
+        if (!chain.value ||
+            chain.key == AlbumType.NikkiPhotos_HighQuality ||
+            !albumsInfoMap[chain.key]!.supportedPlatforms.canRunPlatform) {
+          continue;
+        }
+
+        final Path? gameAlbumPath = getAlbumPath(
+          installPath,
+          chain.key,
+          uid: _selectedUid,
+          source: ImageSource.game,
+        );
+        if (gameAlbumPath != null) {
+          final File matchingFile = (gameAlbumPath + item.name).file;
+          if (await matchingFile.exists()) {
+            final bool recycled = await _recycleOrDeleteImage(
+              Path(matchingFile.path),
+              msSinceEpoch,
+              chain.key,
+              uid,
+              false,
+            );
+            if (!recycled) errorCount++;
+          }
+        }
+
+        final Path? backupAlbumPath = getAlbumPath(
+          installPath,
+          chain.key,
+          uid: _selectedUid,
+          source: ImageSource.backup,
+        );
+        if (backupAlbumPath != null) {
+          final File matchingFile = (backupAlbumPath + item.name).file;
+          if (await matchingFile.exists()) {
+            final bool recycled = await _recycleOrDeleteImage(
+              Path(matchingFile.path),
+              msSinceEpoch,
+              chain.key,
+              uid,
+              false,
+            );
+            if (!recycled) errorCount++;
+          }
+        }
+      }
+
+      onProgress?.call(++current / images.length);
+    }
+
+    _album.selectedImages.removeAll(recycledSources);
+    _album.whenSelectedImagesChange.notify();
+    return (recycledSources, errorCount);
+  }
+
   Future<bool> _recycleOrDeleteImage(
     Path imagePath,
     String msSinceEpoch,
