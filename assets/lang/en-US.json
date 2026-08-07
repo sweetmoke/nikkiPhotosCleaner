@@ -5,6 +5,7 @@
   "exportCleanupSelectVersions": "Also clean up matching versions from:",
   "exportAndCleanup": "Export and clean up",
   "exportCleanupResult": "Exported: {}  ·  Export failed: {}  ·  Cleanup failed: {}",
+  "addToParameterManager": "Add to Parameter Manager",
   "nikkialbums": "Nikki Albums",
   "info": "This software is still in the testing phase and does not represent the final quality.\n",
   "----------common----------": "----------common----------",

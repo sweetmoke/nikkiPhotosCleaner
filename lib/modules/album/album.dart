@@ -1748,54 +1748,58 @@ class _AlbumExhibitionWithHeaderState extends State<AlbumExhibitionWithHeader> {
                             String title,
                             List<ImageItem> images,
                           ) {
-                        return Container(
-                          alignment: Alignment.centerLeft,
-                          color: AppTheme.of(
-                            context,
-                          )!.colorScheme.background.color,
-                          padding: const EdgeInsets.only(left: listSpacing),
-                          height: topBarHeight,
-                          child: NotifierBuilder(
-                            listenable:
-                                widget.game.album.whenSelectedImagesChange,
-                            builder: (BuildContext context, Widget? child) {
-                              final Set<ImageItem> selectedImages =
-                                  widget.game.album.selectedImages;
-                              final int selectedCount = images
-                                  .where(selectedImages.contains)
-                                  .length;
-                              final bool allSelected =
-                                  selectedCount == images.length;
-                              final bool? checkboxValue = selectedCount == 0
-                                  ? false
-                                  : allSelected
-                                  ? true
-                                  : null;
+                            return Container(
+                              alignment: Alignment.centerLeft,
+                              color: AppTheme.of(
+                                context,
+                              )!.colorScheme.background.color,
+                              padding: const EdgeInsets.only(left: listSpacing),
+                              height: topBarHeight,
+                              child: NotifierBuilder(
+                                listenable:
+                                    widget.game.album.whenSelectedImagesChange,
+                                builder: (BuildContext context, Widget? child) {
+                                  final Set<ImageItem> selectedImages =
+                                      widget.game.album.selectedImages;
+                                  final int selectedCount = images
+                                      .where(selectedImages.contains)
+                                      .length;
+                                  final bool allSelected =
+                                      selectedCount == images.length;
+                                  final bool? checkboxValue = selectedCount == 0
+                                      ? false
+                                      : allSelected
+                                      ? true
+                                      : null;
 
-                              return Row(
-                                children: [
-                                  Checkbox(
-                                    value: checkboxValue,
-                                    tristate: true,
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    visualDensity: VisualDensity.compact,
-                                    onChanged: (_) {
-                                      if (allSelected) {
-                                        widget.game.album.deselectImages(images);
-                                      } else {
-                                        widget.game.album.selectImages(images);
-                                      }
-                                    },
-                                  ),
-                                  const SizedBox(width: smallPadding),
-                                  AppText(title),
-                                ],
-                              );
-                            },
-                          ),
-                        );
-                      },
+                                  return Row(
+                                    children: [
+                                      Checkbox(
+                                        value: checkboxValue,
+                                        tristate: true,
+                                        materialTapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                        visualDensity: VisualDensity.compact,
+                                        onChanged: (_) {
+                                          if (allSelected) {
+                                            widget.game.album.deselectImages(
+                                              images,
+                                            );
+                                          } else {
+                                            widget.game.album.selectImages(
+                                              images,
+                                            );
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(width: smallPadding),
+                                      AppText(title),
+                                    ],
+                                  );
+                                },
+                              ),
+                            );
+                          },
                       itemBuilder: (BuildContext context, ImageItem item) {
                         return Exhibit(widget.game, item);
                       },
@@ -1933,21 +1937,24 @@ class _ExhibitState extends State<Exhibit> {
                   ? "assets/icon/tag.webp"
                   : "assets/icon/tag_fill.webp";
 
-              return MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: Listener(
-                  onPointerDown: (_) {
-                    AlbumValuePool.of(context).isPressTag.value = true;
+              return Tooltip(
+                message: context.tr("tag"),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Listener(
+                    onPointerDown: (_) {
+                      AlbumValuePool.of(context).isPressTag.value = true;
 
-                    trigger();
-                  },
-                  onPointerUp: (_) {
-                    AlbumValuePool.of(context).isPressTag.value = false;
-                  },
-                  onPointerCancel: (_) {
-                    AlbumValuePool.of(context).isPressTag.value = false;
-                  },
-                  child: Image.asset(icon, color: color),
+                      trigger();
+                    },
+                    onPointerUp: (_) {
+                      AlbumValuePool.of(context).isPressTag.value = false;
+                    },
+                    onPointerCancel: (_) {
+                      AlbumValuePool.of(context).isPressTag.value = false;
+                    },
+                    child: Image.asset(icon, color: color),
+                  ),
                 ),
               );
             },
@@ -2046,94 +2053,98 @@ class _ExhibitState extends State<Exhibit> {
       right: smallPadding,
       width: smallButtonContentSize + 2 * smallBorder,
       height: smallButtonContentSize + 2 * smallBorder,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () async {
-            final ParamBoxManager globalManager =
-                await GlobalParamBoxManagerBuilder.getGlobalManager(
-                  AppState.customParamBoxPath.value,
-                );
+      child: Tooltip(
+        message: context.tr("addToParameterManager"),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () async {
+              final ParamBoxManager globalManager =
+                  await GlobalParamBoxManagerBuilder.getGlobalManager(
+                    AppState.customParamBoxPath.value,
+                  );
 
-            final MediaCustomData? customData = await widget.imageItem.getParam(
-              widget.game.selectedUid!.value,
-              widget.game.selectedAlbum,
-            );
+              final MediaCustomData? customData = await widget.imageItem
+                  .getParam(
+                    widget.game.selectedUid!.value,
+                    widget.game.selectedAlbum,
+                  );
 
-            customData?.whenOrNull(
-              valid: (MediaParam mediaParam) {
-                mediaParam.whenOrNull(
-                  nikkiPhoto: (NikkiPhotoParams nikkiPhotoParams) {
-                    final String? code = nikkiPhotoParams.camera?.params;
-                    if (code == null) {
-                      return;
-                    }
-
-                    _showParamItemEditPanel(
-                      context,
-                      globalManager,
-                      code,
-                      NativeParamItemCover(
-                        path: widget.imageItem.path.path,
-                        isCache: false,
-                      ),
-                    );
-                  },
-                  clockInPhoto: (ClockInPhotoParams clockInPhotoParams) {
-                    final String? code = clockInPhotoParams.camera?.params;
-                    if (code == null) {
-                      return;
-                    }
-
-                    _showParamItemEditPanel(
-                      context,
-                      globalManager,
-                      code,
-                      NativeParamItemCover(
-                        path: widget.imageItem.path.path,
-                        isCache: false,
-                      ),
-                    );
-                  },
-                  diy: (ClothDiyParams clothDiyParams) async {
-                    if (widget.game.selectedUid == null) {
-                      return;
-                    }
-
-                    final String? code = await tryGetClothDiyShareCode(
-                      params: clothDiyParams,
-                      game: widget.game,
-                      uid: widget.game.selectedUid!.value,
-                    );
-
-                    if (context.mounted) {
+              customData?.whenOrNull(
+                valid: (MediaParam mediaParam) {
+                  mediaParam.whenOrNull(
+                    nikkiPhoto: (NikkiPhotoParams nikkiPhotoParams) {
+                      final String? code = nikkiPhotoParams.camera?.params;
                       if (code == null) {
-                        AppToast.showMessage(
-                          context: context,
-                          message:
-                              "${context.tr("parameter_manager.diy_image_have_no_share_code")}\n${context.tr("parameter_manager.diy_image_have_no_share_code_tip")}",
-                          state: false,
-                        );
-                      } else {
-                        _showParamItemEditPanel(
-                          context,
-                          globalManager,
-                          code,
-                          NativeParamItemCover(
-                            path: widget.imageItem.path.path,
-                            isCache: false,
-                          ),
-                        );
+                        return;
                       }
-                    }
-                  },
-                );
-              },
-            );
-          },
-          child: AppIcon(
-            "parameter_manager",
-            color: AppColorScheme.of(context).highlight.onColor,
+
+                      _showParamItemEditPanel(
+                        context,
+                        globalManager,
+                        code,
+                        NativeParamItemCover(
+                          path: widget.imageItem.path.path,
+                          isCache: false,
+                        ),
+                      );
+                    },
+                    clockInPhoto: (ClockInPhotoParams clockInPhotoParams) {
+                      final String? code = clockInPhotoParams.camera?.params;
+                      if (code == null) {
+                        return;
+                      }
+
+                      _showParamItemEditPanel(
+                        context,
+                        globalManager,
+                        code,
+                        NativeParamItemCover(
+                          path: widget.imageItem.path.path,
+                          isCache: false,
+                        ),
+                      );
+                    },
+                    diy: (ClothDiyParams clothDiyParams) async {
+                      if (widget.game.selectedUid == null) {
+                        return;
+                      }
+
+                      final String? code = await tryGetClothDiyShareCode(
+                        params: clothDiyParams,
+                        game: widget.game,
+                        uid: widget.game.selectedUid!.value,
+                      );
+
+                      if (context.mounted) {
+                        if (code == null) {
+                          AppToast.showMessage(
+                            context: context,
+                            message:
+                                "${context.tr("parameter_manager.diy_image_have_no_share_code")}\n${context.tr("parameter_manager.diy_image_have_no_share_code_tip")}",
+                            state: false,
+                          );
+                        } else {
+                          _showParamItemEditPanel(
+                            context,
+                            globalManager,
+                            code,
+                            NativeParamItemCover(
+                              path: widget.imageItem.path.path,
+                              isCache: false,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  );
+                },
+              );
+            },
+            child: AppIcon(
+              "parameter_manager",
+              color: AppColorScheme.of(context).highlight.onColor,
+            ),
           ),
         ),
       ),
