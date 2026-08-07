@@ -8,7 +8,12 @@ class AlbumView extends StatefulWidget {
   final SliverGridDelegate? gridDelegate;
   final EdgeInsetsGeometry? padding;
   final double headerHeight;
-  final Widget Function(BuildContext context, String title) headerBuilder;
+  final Widget Function(
+    BuildContext context,
+    String title,
+    List<ImageItem> items,
+  )
+  headerBuilder;
   final Widget Function(BuildContext context, ImageItem item) itemBuilder;
   final ScrollController? controller;
   final ScrollPhysics? physics;
@@ -61,6 +66,7 @@ class _AlbumViewState extends State<AlbumView> {
           pinned: true,
           delegate: _HeaderDelegate(
             title: _formatDate(sec.date),
+            items: sec.items,
             headerHeight: widget.headerHeight,
             headerBuilder: widget.headerBuilder,
           ),
@@ -106,10 +112,17 @@ class _Section {
 /// 简单的 header delegate
 class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   final String title;
+  final List<ImageItem> items;
   final double headerHeight;
-  final Widget Function(BuildContext context, String title) headerBuilder;
+  final Widget Function(
+    BuildContext context,
+    String title,
+    List<ImageItem> items,
+  )
+  headerBuilder;
   const _HeaderDelegate({
     required this.title,
+    required this.items,
     required this.headerHeight,
     required this.headerBuilder,
   });
@@ -120,7 +133,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return headerBuilder(context, title);
+    return headerBuilder(context, title, items);
   }
 
   @override

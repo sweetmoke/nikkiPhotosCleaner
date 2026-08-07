@@ -292,6 +292,13 @@ class AlbumManager extends ChangeNotifier with AlbumPath {
     _safeNotifySelected();
   }
 
+  void selectImages(Iterable<ImageItem> items) {
+    final int previousLength = _selectedImages.length;
+    _selectedImages.addAll(items);
+
+    if (_selectedImages.length != previousLength) _safeNotifySelected();
+  }
+
   Future<void> selectAllImage() async {
     _selectedImages.addAll(await flatProcess());
 
@@ -304,6 +311,13 @@ class AlbumManager extends ChangeNotifier with AlbumPath {
     _selectedImages.remove(item);
 
     _safeNotifySelected();
+  }
+
+  void deselectImages(Iterable<ImageItem> items) {
+    final int previousLength = _selectedImages.length;
+    _selectedImages.removeAll(items);
+
+    if (_selectedImages.length != previousLength) _safeNotifySelected();
   }
 
   void deselectAllImage() {

@@ -1742,7 +1742,12 @@ class _AlbumExhibitionWithHeaderState extends State<AlbumExhibitionWithHeader> {
                         crossAxisSpacing: 1,
                       ),
                       headerHeight: topBarHeight,
-                      headerBuilder: (BuildContext context, String title) {
+                      headerBuilder:
+                          (
+                            BuildContext context,
+                            String title,
+                            List<ImageItem> images,
+                          ) {
                         return Container(
                           alignment: Alignment.centerLeft,
                           color: AppTheme.of(
@@ -1750,7 +1755,45 @@ class _AlbumExhibitionWithHeaderState extends State<AlbumExhibitionWithHeader> {
                           )!.colorScheme.background.color,
                           padding: const EdgeInsets.only(left: listSpacing),
                           height: topBarHeight,
-                          child: AppText(title),
+                          child: NotifierBuilder(
+                            listenable:
+                                widget.game.album.whenSelectedImagesChange,
+                            builder: (BuildContext context, Widget? child) {
+                              final Set<ImageItem> selectedImages =
+                                  widget.game.album.selectedImages;
+                              final int selectedCount = images
+                                  .where(selectedImages.contains)
+                                  .length;
+                              final bool allSelected =
+                                  selectedCount == images.length;
+                              final bool? checkboxValue = selectedCount == 0
+                                  ? false
+                                  : allSelected
+                                  ? true
+                                  : null;
+
+                              return Row(
+                                children: [
+                                  Checkbox(
+                                    value: checkboxValue,
+                                    tristate: true,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    visualDensity: VisualDensity.compact,
+                                    onChanged: (_) {
+                                      if (allSelected) {
+                                        widget.game.album.deselectImages(images);
+                                      } else {
+                                        widget.game.album.selectImages(images);
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: smallPadding),
+                                  AppText(title),
+                                ],
+                              );
+                            },
+                          ),
                         );
                       },
                       itemBuilder: (BuildContext context, ImageItem item) {
